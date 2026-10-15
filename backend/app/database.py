@@ -11,7 +11,7 @@ async def open_pool() -> asyncpg.Pool:
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
         raise RuntimeError("DATABASE_URL must be configured before connecting to PostgreSQL.")
-    _pool = await asyncpg.create_pool(database_url)
+    _pool = await asyncpg.create_pool(database_url, min_size=0, max_size=5)
     return _pool
 
 

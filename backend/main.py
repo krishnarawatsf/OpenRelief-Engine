@@ -10,6 +10,12 @@ from app.database import close_pool, open_pool
 
 load_dotenv()
 
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+    if origin.strip()
+]
+
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -22,7 +28,7 @@ async def lifespan(_: FastAPI):
 app = FastAPI(title="OpenRelief Engine", version="1.0.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

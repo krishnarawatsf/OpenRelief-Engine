@@ -52,6 +52,17 @@ The dashboard is at <http://localhost:3000>, and the API is at
 `/api/incidents/{id}/cap.xml`. Resolving an incident returns its assigned
 responder to the available pool.
 
+## Current Vercel deployment
+
+- Dashboard: <https://frontend-nine-dun-z1c05ngtla.vercel.app>
+- API: <https://backend-phi-sand-90.vercel.app>
+
+The dashboard and API are deployed and the API health check responds. Database
+routes will return `503` until `DATABASE_URL` points to a reachable hosted
+PostgreSQL database with PostGIS enabled and the schema and seed data have been
+applied. Configure it in the `openrelief-api` Vercel project's Production
+environment variables, then redeploy that project.
+
 ## Notes
 
 - Local development defaults to `DATABASE_URL` from `.env.example`:
@@ -66,6 +77,35 @@ responder to the available pool.
   `trapped`, `fire`, or `explosion` to urgency 5 / CAP severity Extreme.
 - "Local offline mode" switches the frontend to a campus-local schematic map;
   it does not provide navigable cached OpenStreetMap tiles.
+
+## Deploying to Vercel
+
+The Next.js frontend and FastAPI backend are separate Vercel projects because
+they use different runtimes:
+
+- Frontend project: `openrelief-engine`, root directory `frontend`
+- API project: `openrelief-api`, root directory `backend`
+
+In the Vercel project settings, connect the GitHub repository
+`krishnarawatsf/OpenRelief-Engine` to each project and set its root directory as
+listed above. Configure these production environment variables:
+
+| Project | Variable | Value |
+| --- | --- | --- |
+| `openrelief-engine` | `NEXT_PUBLIC_API_URL` | The deployed API origin, e.g. `https://backend-phi-sand-90.vercel.app` |
+| `openrelief-engine` | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL (optional; enables realtime) |
+| `openrelief-engine` | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key (optional; enables realtime) |
+| `openrelief-api` | `DATABASE_URL` | Hosted PostgreSQL connection string with PostGIS enabled (required) |
+| `openrelief-api` | `CORS_ORIGINS` | Comma-separated frontend origins, e.g. `https://frontend-nine-dun-z1c05ngtla.vercel.app` |
+| `openrelief-api` | `AZURE_OPENAI_KEY`, `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_DEPLOYMENT_NAME` | Azure OpenAI configuration (optional; mock triage otherwise) |
+| `openrelief-api` | `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION` | Azure Speech configuration (optional; mock transcription otherwise) |
+
+Apply `backend/app/db/schema.sql` to the hosted database and run the responder
+seed once with `DATABASE_URL` set before using database-backed routes. Do not
+put database or Azure secrets in `NEXT_PUBLIC_*` variables. Vercel's project
+root directory must be set to the relevant subfolder for Git-based deployments.
+For CLI deployments, run `vercel --cwd backend --prod` and
+`vercel --cwd frontend --prod`.
 
 ## Checks
 
