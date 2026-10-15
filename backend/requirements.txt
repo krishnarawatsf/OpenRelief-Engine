@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+pydantic>=2
+psycopg2-binary
+asyncpg
+azure-cognitiveservices-speech
+openai
+python-dotenv
+python-multipart
