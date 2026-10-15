@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@/utils/supabase/client";
 import DemoPanel from "@/components/DemoPanel";
 import LiveFeed from "@/components/LiveFeed";
 import IncidentDetailsModal from "@/components/IncidentDetailsModal";
@@ -39,11 +39,7 @@ export default function Home() {
   const [feedError, setFeedError] = useState("");
   const hasLoadedRef = useRef(false);
   const lastIncidentIdsRef = useRef(new Set<string>());
-  const supabase = useMemo<SupabaseClient | null>(() => {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    return url && key ? createClient(url, key) : null;
-  }, []);
+  const supabase = useMemo(() => createClient(), []);
 
   const refreshDashboard = useCallback(async () => {
     try {

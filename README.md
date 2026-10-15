@@ -40,8 +40,10 @@ nearest-responder dispatch, a live map, and CAP v1.2 XML export.
    npm run dev
    ```
 
-   Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in
-   `frontend/.env.local` to enable browser realtime. In Supabase, enable Realtime
+   Set `NEXT_PUBLIC_SUPABASE_URL` and
+   `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in `frontend/.env.local` to enable
+   browser realtime and Supabase session refresh. The legacy
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY` is also accepted. In Supabase, enable Realtime
    for the `public.incidents` table and ensure the anon role can read the rows
    that should appear on the dashboard. The backend separately uses `SUPABASE_URL`
    and `SUPABASE_ANON_KEY` if needed by future server-side integrations.
@@ -95,7 +97,7 @@ Configure these production environment variables:
 | `openrelief-engine` | `DATABASE_URL` | Hosted PostgreSQL connection string with PostGIS enabled (required) |
 | `openrelief-engine` | `AZURE_OPENAI_KEY`, `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_DEPLOYMENT_NAME` | Azure OpenAI configuration (optional; mock triage otherwise) |
 | `openrelief-engine` | `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION` | Azure Speech configuration (optional; mock transcription otherwise) |
-| `openrelief-engine` | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase project URL and anon key (optional; enables realtime) |
+| `openrelief-engine` | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase project URL and publishable key (optional; enables realtime and session refresh) |
 
 The schema portion of the initial migration mirrors
 `backend/app/db/schema.sql`; the migration also seeds the six responders. For a
