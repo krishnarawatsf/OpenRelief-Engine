@@ -84,17 +84,19 @@ Pro plan; that is optional for production schema deployment.
 The initial migration enables PostGIS, creates the responder and incident
 tables, and inserts the six campus responder units.
 
-The public routes are `/api/*` and `/health` to the backend, and all other paths
-to the frontend. The frontend calls `/api/*` on the same public origin, so there
-is no server-to-server call and no internal service binding is needed. The
-browser cannot consume a private runtime binding; the API rewrite is the
-intentional public entry point.
+When deployed as one Vercel project using the root [`vercel.json`](./vercel.json),
+the public routes are `/api/*` and `/health` to the backend, and all other paths
+to the frontend. The currently linked frontend and backend are separate Vercel
+projects, so configure `NEXT_PUBLIC_API_URL` on the frontend project to the
+public backend origin. The browser calls that public API directly; this does not
+need an internal service binding.
 
 Configure these production environment variables:
 
 | Project | Variable | Value |
 | --- | --- | --- |
 | `openrelief-engine` | `DATABASE_URL` | Hosted PostgreSQL connection string with PostGIS enabled (required) |
+| `openrelief-engine` | `NEXT_PUBLIC_API_URL` | Public origin of the separately deployed backend (for example, `https://backend-phi-sand-90.vercel.app`) |
 | `openrelief-engine` | `AZURE_OPENAI_KEY`, `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_DEPLOYMENT_NAME` | Azure OpenAI configuration (optional; mock triage otherwise) |
 | `openrelief-engine` | `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION` | Azure Speech configuration (optional; mock transcription otherwise) |
 | `openrelief-engine` | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase project URL and publishable key (optional; enables realtime and session refresh) |
