@@ -73,6 +73,15 @@ The root [`vercel.json`](./vercel.json) configures the Next.js frontend and
 FastAPI backend as services in one Vercel project. Set the project root to the
 repository root and connect `krishnarawatsf/OpenRelief-Engine`.
 
+For Supabase's GitHub integration, this repository includes
+[`supabase/config.toml`](./supabase/config.toml) and an initial migration under
+`supabase/migrations/`. Set **Working directory** to `.` and **Production
+branch name** to `master`. Enable **Deploy to production** to apply migrations
+on pushes/merges to `master`. Automatic preview branches require the Supabase
+Pro plan; that is optional for production schema deployment.
+The initial migration enables PostGIS, creates the responder and incident
+tables, and inserts the six campus responder units.
+
 The public routes are `/api/*` and `/health` to the backend, and all other paths
 to the frontend. The frontend calls `/api/*` on the same public origin, so there
 is no server-to-server call and no internal service binding is needed. The
@@ -88,9 +97,11 @@ Configure these production environment variables:
 | `openrelief-engine` | `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION` | Azure Speech configuration (optional; mock transcription otherwise) |
 | `openrelief-engine` | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase project URL and anon key (optional; enables realtime) |
 
-Apply `backend/app/db/schema.sql` to the hosted database and run the responder
-seed once with `DATABASE_URL` set before using database-backed routes. Do not
-put database or Azure secrets in `NEXT_PUBLIC_*` variables. Locally, set
+The schema portion of the initial migration mirrors
+`backend/app/db/schema.sql`; the migration also seeds the six responders. For a
+database managed by the Supabase GitHub integration, let that migration create
+and seed the schema. Do not put database or Azure secrets in `NEXT_PUBLIC_*`
+variables. Locally, set
 `NEXT_PUBLIC_API_URL=http://localhost:8000` when running Next.js and FastAPI
 separately; leave it unset on Vercel to use same-origin `/api/*` routing. Use
 `vercel dev` from the repository root to run the configured services together.
