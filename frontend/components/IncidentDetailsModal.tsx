@@ -7,10 +7,17 @@ type IncidentDetailsModalProps = {
   incident: Incident;
   apiUrl: string;
   onClose: () => void;
+  onStatusUpdate: (incidentId: string) => void;
 };
 
-export default function IncidentDetailsModal({ incident, apiUrl, onClose }: IncidentDetailsModalProps) {
+export default function IncidentDetailsModal({
+  incident,
+  apiUrl,
+  onClose,
+  onStatusUpdate,
+}: IncidentDetailsModalProps) {
   const [exporting, setExporting] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const [error, setError] = useState("");
 
   async function exportCap() {
@@ -25,11 +32,33 @@ export default function IncidentDetailsModal({ incident, apiUrl, onClose }: Inci
       anchor.href = url;
       anchor.download = "alert_CAP_v1.2.xml";
       anchor.click();
-      URL.revokeObjectURL(url);
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Unable to export the CAP alert.");
     } finally {
       setExporting(false);
+    }
+  }
+
+  async function updateStatus(status: "RESOLVED" | "CANCELLED") {
+    setUpdatingStatus(true);
+    setError("");
+    try {
+      const response = await fetch(
+        `${apiUrl}/api/incidents/${encodeURIComponent(incident.id)}/status`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status }),
+        },
+      );
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.detail ?? `Incident update failed (${response.status}).`);
+      onStatusUpdate(incident.id);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Unable to update incident status.");
+    } finally {
+      setUpdatingStatus(false);
     }
   }
 
@@ -53,9 +82,18 @@ export default function IncidentDetailsModal({ incident, apiUrl, onClose }: Inci
           </div>
           <p>{incident.transcript}</p>
           <p>Assigned unit: {incident.assigned_responder?.unit_name ?? "Awaiting available responder"}</p>
-          <button type="button" className="export-button" disabled={exporting} onClick={() => void exportCap()}>
+          <div className="modal-actions">
+            {incident.status === "OPEN" || incident.status === "DISPATCHED" ? (
+              <button type="button" className="export-button resolve-button"
+                disabled={updatingStatus || exporting}
+                onClick={() => void updateStatus("RESOLVED")}>
+                {updatingStatus ? "Updating…" : "Resolve incident"}
+              </button>
+            ) : null}
+            <button type="button" className="export-button" disabled={exporting || updatingStatus} onClick={() => void exportCap()}>
             {exporting ? "Preparing XML…" : "Export CAP v1.2 Alert"}
-          </button>
+            </button>
+          </div>
           {error && <div className="error-text" role="alert">{error}</div>}
         </div>
       </section>

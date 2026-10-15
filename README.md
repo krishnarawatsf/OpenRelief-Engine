@@ -48,15 +48,20 @@ nearest-responder dispatch, a live map, and CAP v1.2 XML export.
 
 The dashboard is at <http://localhost:3000>, and the API is at
 <http://localhost:8000>. The backend exposes `/health`, `/api/triage`,
-`/api/responders`, `/api/incidents`, and
-`/api/incidents/{id}/cap.xml`.
+`/api/responders`, `/api/incidents`, `PATCH /api/incidents/{id}/status`, and
+`/api/incidents/{id}/cap.xml`. Resolving an incident returns its assigned
+responder to the available pool.
 
 ## Notes
 
 - Local development defaults to `DATABASE_URL` from `.env.example`:
   `postgresql://openrelief:openrelief@localhost:5432/openrelief`.
-- For audio triage, send a multipart request with the file field named `audio`.
-  JSON requests use `{"text":"..."}`.
+- For audio triage, send a multipart request with a WAV file in the field named
+  `audio` (uncompressed 16-bit PCM when Azure Speech is enabled). JSON requests
+  use `{"text":"..."}`.
+- Without Supabase credentials, the dashboard polls the API every five seconds.
+  With Supabase credentials and Realtime enabled for `public.incidents`, new
+  incidents are also delivered immediately.
 - The safety override escalates transcripts containing `unconscious`, `bleeding`,
   `trapped`, `fire`, or `explosion` to urgency 5 / CAP severity Extreme.
 - "Local offline mode" switches the frontend to a campus-local schematic map;
@@ -65,5 +70,6 @@ The dashboard is at <http://localhost:3000>, and the API is at
 ## Checks
 
 ```sh
+python3 -m unittest discover -s backend/tests -v
 cd frontend && npm run typecheck && npm run lint
 ```

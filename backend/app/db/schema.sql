@@ -29,7 +29,9 @@ CREATE TABLE IF NOT EXISTS incidents (
         CHECK (cap_severity IN ('Extreme', 'Severe', 'Moderate', 'Minor')),
     location GEOGRAPHY(Point, 4326) NOT NULL,
     assigned_responder_id UUID REFERENCES responders(id),
-    status VARCHAR(30) NOT NULL DEFAULT 'OPEN',
+    status VARCHAR(30) NOT NULL DEFAULT 'OPEN'
+        CONSTRAINT incidents_status_lifecycle_check
+        CHECK (status IN ('OPEN', 'DISPATCHED', 'RESOLVED', 'CANCELLED')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -37,5 +39,23 @@ ALTER TABLE incidents
     ADD COLUMN IF NOT EXISTS extracted_location_name VARCHAR(255) NOT NULL
     DEFAULT 'SRM Institute of Science and Technology, Kattankulathur';
 
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'incidents_status_lifecycle_check'
+          AND conrelid = 'incidents'::regclass
+    ) THEN
+        ALTER TABLE incidents
+            ADD CONSTRAINT incidents_status_lifecycle_check
+            CHECK (status IN ('OPEN', 'DISPATCHED', 'RESOLVED', 'CANCELLED'));
+    END IF;
+END
+$$;
+
 CREATE INDEX IF NOT EXISTS responders_location_gist ON responders USING GIST (location);
 CREATE INDEX IF NOT EXISTS incidents_location_gist ON incidents USING GIST (location);
+CREATE INDEX IF NOT EXISTS incidents_active_priority
+    ON incidents (priority_score DESC, created_at DESC)
+    WHERE status IN ('OPEN', 'DISPATCHED');

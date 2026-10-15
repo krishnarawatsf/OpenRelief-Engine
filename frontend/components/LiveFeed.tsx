@@ -11,7 +11,7 @@ export default function LiveFeed({ incidents, onSelect }: LiveFeedProps) {
     <section className="feed-panel">
       <div className="section-heading">
         <h2>ACTIVE INCIDENTS</h2>
-        <span>{sorted.length.toString().padStart(2, "0")} OPEN</span>
+        <span>{sorted.length.toString().padStart(2, "0")} ACTIVE</span>
       </div>
       <div className="feed-list">
         {sorted.length === 0 ? (

@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import DemoPanel from "@/components/DemoPanel";
 import LiveFeed from "@/components/LiveFeed";
@@ -37,6 +37,8 @@ export default function Home() {
   const [offlineMode, setOfflineMode] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [feedError, setFeedError] = useState("");
+  const hasLoadedRef = useRef(false);
+  const lastIncidentIdsRef = useRef(new Set<string>());
   const supabase = useMemo<SupabaseClient | null>(() => {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -57,7 +59,15 @@ export default function Home() {
         incidentResponse.json() as Promise<Incident[]>,
       ]);
       setResponders(nextResponders);
+      if (
+        hasLoadedRef.current &&
+        nextIncidents.some((incident) => !lastIncidentIdsRef.current.has(incident.id))
+      ) {
+        playAlert();
+      }
+      lastIncidentIdsRef.current = new Set(nextIncidents.map((incident) => incident.id));
       setIncidents(nextIncidents);
+      hasLoadedRef.current = true;
       setFeedError("");
     } catch (error) {
       setFeedError(error instanceof Error ? error.message : "Unable to load dashboard data.");
@@ -66,6 +76,8 @@ export default function Home() {
 
   useEffect(() => {
     void refreshDashboard();
+    const pollingId = window.setInterval(() => void refreshDashboard(), 5000);
+    return () => window.clearInterval(pollingId);
   }, [refreshDashboard]);
 
   useEffect(() => {
@@ -75,14 +87,7 @@ export default function Home() {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "incidents" }, (payload) => {
         const row = payload.new as Partial<Incident>;
         if (!row.id) return;
-        const incident: Incident = {
-          ...(row as Incident),
-          latitude: Number(row.latitude ?? 12.8231),
-          longitude: Number(row.longitude ?? 80.0444),
-          assigned_responder:
-            responders.find((responder) => responder.id === row.assigned_responder_id) ?? null,
-        };
-        setIncidents((current) => [incident, ...current.filter((item) => item.id !== incident.id)]);
+        lastIncidentIdsRef.current.add(row.id);
         void refreshDashboard();
         playAlert();
       })
@@ -94,9 +99,10 @@ export default function Home() {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [refreshDashboard, responders, supabase]);
+  }, [refreshDashboard, supabase]);
 
   const handleNewIncident = useCallback((incident: Incident) => {
+    lastIncidentIdsRef.current.add(incident.id);
     setIncidents((current) => [incident, ...current.filter((item) => item.id !== incident.id)]);
     if (incident.assigned_responder_id) {
       setResponders((current) => current.map((responder) =>
@@ -105,6 +111,19 @@ export default function Home() {
     }
     setSelectedIncident(incident);
   }, []);
+
+  const handleStatusUpdate = useCallback((incidentId: string) => {
+    const assignedResponderId = selectedIncident?.assigned_responder_id;
+    lastIncidentIdsRef.current.delete(incidentId);
+    setIncidents((current) => current.filter((incident) => incident.id !== incidentId));
+    setResponders((current) => current.map((responder) =>
+      responder.id === assignedResponderId
+        ? { ...responder, is_available: true }
+        : responder,
+    ));
+    void refreshDashboard();
+    setSelectedIncident(null);
+  }, [refreshDashboard, selectedIncident?.assigned_responder_id]);
 
   return (
     <main className="dashboard-shell">
@@ -129,7 +148,7 @@ export default function Home() {
         </label>
       </header>
       {feedError && <div className="system-notice" role="status">{feedError}</div>}
-      {!supabase && <div className="system-notice">Realtime disabled: configure the NEXT_PUBLIC_SUPABASE credentials.</div>}
+      {!supabase && <div className="system-notice">Supabase realtime is not configured; live incidents refresh every 5 seconds.</div>}
       <div className="dashboard-grid">
         <aside className="sidebar">
           <DemoPanel apiUrl={API_URL} onIncident={handleNewIncident} />
@@ -153,6 +172,7 @@ export default function Home() {
           incident={selectedIncident}
           apiUrl={API_URL}
           onClose={() => setSelectedIncident(null)}
+          onStatusUpdate={handleStatusUpdate}
         />
       )}
     </main>

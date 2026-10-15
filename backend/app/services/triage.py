@@ -44,8 +44,16 @@ def _mock_analysis(text: str) -> TriageResult:
             "four": 4,
             "five": 5,
         }[count]
-    urgency = 4 if any(word in lower_text for word in ("emergency", "crash", "injur", "evacuation")) else 2
-    severity: Literal["Extreme", "Severe", "Moderate", "Minor"] = "Severe" if urgency >= 4 else "Moderate"
+    injury_is_negated = re.search(
+        r"\b(?:no|without|zero)\s+(?:any\s+)?(?:reported\s+)?injur(?:y|ies|ed)\b",
+        lower_text,
+    )
+    urgent_report = any(word in lower_text for word in ("emergency", "crash", "evacuation"))
+    urgent_report |= "injur" in lower_text and injury_is_negated is None
+    urgency = 4 if urgent_report else 2
+    severity: Literal["Extreme", "Severe", "Moderate", "Minor"] = (
+        "Severe" if urgency == 4 else "Minor"
+    )
     location = next(
         (name for name in ("SRM Tech Park", "Java Canteen", "Hostel Block 3", "SRMIST Kattankulathur") if name.casefold() in lower_text),
         "SRM Institute of Science and Technology, Kattankulathur",
@@ -65,11 +73,21 @@ def analyze_transcript(text: str) -> TriageResult:
     endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
     api_key = os.getenv("AZURE_OPENAI_KEY")
     deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME")
-    if endpoint and api_key and deployment:
+    configured = (bool(endpoint), bool(api_key), bool(deployment))
+    if not any(configured):
+        result = _mock_analysis(text)
+    elif not all(configured):
+        raise RuntimeError(
+            "Configure AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_KEY, and "
+            "AZURE_OPENAI_DEPLOYMENT_NAME together."
+        )
+    else:
         client = AzureOpenAI(
             api_key=api_key,
             azure_endpoint=endpoint,
             api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview"),
+            timeout=30.0,
+            max_retries=1,
         )
         completion = client.chat.completions.create(
             model=deployment,
@@ -92,8 +110,6 @@ def analyze_transcript(text: str) -> TriageResult:
         if not content:
             raise RuntimeError("Azure OpenAI returned an empty triage response.")
         result = TriageResult.model_validate(json.loads(content))
-    else:
-        result = _mock_analysis(text)
 
     if any(keyword in text.casefold() for keyword in ("unconscious", "bleeding", "trapped", "fire", "explosion")):
         result = result.model_copy(update={"urgency_rating": 5, "cap_severity": "Extreme"})

@@ -32,7 +32,6 @@ async def seed() -> None:
                     unit_name = EXCLUDED.unit_name,
                     unit_type = EXCLUDED.unit_type,
                     location = EXCLUDED.location,
-                    is_available = TRUE,
                     updated_at = NOW()
                 """,
                 responder_id,
