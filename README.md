@@ -52,17 +52,6 @@ The dashboard is at <http://localhost:3000>, and the API is at
 `/api/incidents/{id}/cap.xml`. Resolving an incident returns its assigned
 responder to the available pool.
 
-## Current Vercel deployment
-
-- Dashboard: <https://frontend-nine-dun-z1c05ngtla.vercel.app>
-- API: <https://backend-phi-sand-90.vercel.app>
-
-The dashboard and API are deployed and the API health check responds. Database
-routes will return `503` until `DATABASE_URL` points to a reachable hosted
-PostgreSQL database with PostGIS enabled and the schema and seed data have been
-applied. Configure it in the `openrelief-api` Vercel project's Production
-environment variables, then redeploy that project.
-
 ## Notes
 
 - Local development defaults to `DATABASE_URL` from `.env.example`:
@@ -80,32 +69,31 @@ environment variables, then redeploy that project.
 
 ## Deploying to Vercel
 
-The Next.js frontend and FastAPI backend are separate Vercel projects because
-they use different runtimes:
+The root [`vercel.json`](./vercel.json) configures the Next.js frontend and
+FastAPI backend as services in one Vercel project. Set the project root to the
+repository root and connect `krishnarawatsf/OpenRelief-Engine`.
 
-- Frontend project: `openrelief-engine`, root directory `frontend`
-- API project: `openrelief-api`, root directory `backend`
+The public routes are `/api/*` and `/health` to the backend, and all other paths
+to the frontend. The frontend calls `/api/*` on the same public origin, so there
+is no server-to-server call and no internal service binding is needed. The
+browser cannot consume a private runtime binding; the API rewrite is the
+intentional public entry point.
 
-In the Vercel project settings, connect the GitHub repository
-`krishnarawatsf/OpenRelief-Engine` to each project and set its root directory as
-listed above. Configure these production environment variables:
+Configure these production environment variables:
 
 | Project | Variable | Value |
 | --- | --- | --- |
-| `openrelief-engine` | `NEXT_PUBLIC_API_URL` | The deployed API origin, e.g. `https://backend-phi-sand-90.vercel.app` |
-| `openrelief-engine` | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL (optional; enables realtime) |
-| `openrelief-engine` | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key (optional; enables realtime) |
-| `openrelief-api` | `DATABASE_URL` | Hosted PostgreSQL connection string with PostGIS enabled (required) |
-| `openrelief-api` | `CORS_ORIGINS` | Comma-separated frontend origins, e.g. `https://frontend-nine-dun-z1c05ngtla.vercel.app` |
-| `openrelief-api` | `AZURE_OPENAI_KEY`, `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_DEPLOYMENT_NAME` | Azure OpenAI configuration (optional; mock triage otherwise) |
-| `openrelief-api` | `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION` | Azure Speech configuration (optional; mock transcription otherwise) |
+| `openrelief-engine` | `DATABASE_URL` | Hosted PostgreSQL connection string with PostGIS enabled (required) |
+| `openrelief-engine` | `AZURE_OPENAI_KEY`, `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_DEPLOYMENT_NAME` | Azure OpenAI configuration (optional; mock triage otherwise) |
+| `openrelief-engine` | `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION` | Azure Speech configuration (optional; mock transcription otherwise) |
+| `openrelief-engine` | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase project URL and anon key (optional; enables realtime) |
 
 Apply `backend/app/db/schema.sql` to the hosted database and run the responder
 seed once with `DATABASE_URL` set before using database-backed routes. Do not
-put database or Azure secrets in `NEXT_PUBLIC_*` variables. Vercel's project
-root directory must be set to the relevant subfolder for Git-based deployments.
-For CLI deployments, run `vercel --cwd backend --prod` and
-`vercel --cwd frontend --prod`.
+put database or Azure secrets in `NEXT_PUBLIC_*` variables. Locally, set
+`NEXT_PUBLIC_API_URL=http://localhost:8000` when running Next.js and FastAPI
+separately; leave it unset on Vercel to use same-origin `/api/*` routing. Use
+`vercel dev` from the repository root to run the configured services together.
 
 ## Checks
 

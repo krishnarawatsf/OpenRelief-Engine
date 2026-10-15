@@ -13,7 +13,7 @@ const Map = dynamic(() => import("@/components/Map"), {
   loading: () => <div className="map-loading">Loading emergency map…</div>,
 });
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 function playAlert() {
   const AudioContextConstructor = window.AudioContext;
